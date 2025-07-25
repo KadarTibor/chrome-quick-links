@@ -7,9 +7,17 @@
     },
     "permissions": ["storage", "tabs"],
     "background": {
-    "service_worker": "background.js"
-  },
-  "omnibox": {
-    "keyword": "go"
-  }
+        "service_worker": "background.js"
+    },
+    "omnibox": {
+        "keyword": "/"
+    },
+    "commands": {
+        "duplicate-tab": {
+          "suggested_key": {
+            "default": "Ctrl+Shift+U"
+          },
+          "description": "Duplicate the current tab"
+        }
+      }
   }
