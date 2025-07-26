@@ -12,7 +12,6 @@
     remapOmnibox();
   }
   
-  // Listen for messages from popup or other parts
   chrome.runtime.onMessage.addListener((message, _, __) => {
     if (message.type === "RELOAD_KEYWORD_MAP") {
       reloadKeywordMapFromStorage()
@@ -21,6 +20,7 @@
 
   function remapOmnibox() {
     chrome.omnibox.onInputEntered.addListener((text) => {
+      console.log('this is triggered', text);
       const url = keywordMap[text.toLowerCase()];
       if (url) {
         chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
@@ -45,5 +45,10 @@
         }
       })
     }
+  })
+
+  chrome.tabs.onCreated.addListener((tab) => {
+    console.log("New tab opened:", tab);
+    reloadKeywordMapFromStorage();
   })
   

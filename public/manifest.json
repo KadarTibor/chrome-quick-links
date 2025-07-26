@@ -1,6 +1,6 @@
 {
     "manifest_version": 3,
-    "name": "My React Extension",
+    "name": "⚡️ Jumpy",
     "version": "1.0",
     "action": {
       "default_popup": "index.html"
