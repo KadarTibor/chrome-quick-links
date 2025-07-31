@@ -57,7 +57,7 @@ export function KeywordMapEditor() {
     <div className="flex flex-col items-start gap-4 p-4">
       <h2 className="text-lg font-semibold">⚡️ Links</h2>
       {entries.map((entry, index) => (
-        <div key={index} className="rounded-[10px] shadow-md shadow-gray-300/50 dark:bg-[#333333] p-4">
+        <div key={index}>
           <KeyValueInput keyValue={entry} onChange={(e) => handleChange(index, e)} onDelete={() => removeEntry(index)}/>
         </div>
       ))}

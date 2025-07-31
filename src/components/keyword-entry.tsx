@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { cn } from "../lib/utils";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
+import clsx from "clsx";
 
 interface KeyValueInputProps {
     keyValue: { key: string; value: string }
@@ -21,13 +22,18 @@ export function KeyValueInput({ keyValue, onChange, onDelete, className }: KeyVa
     }, [keyValue])
 
     return (
-        <div className={cn("flex flex-row gap-4 items center", className)}>
+        <div className={cn("flex flex-row gap-4 items center rounded-[10px] shadow-custom-dark dark:bg-[#333333] p-4", className)}>
             <div className="flex flex-row gap-1 items-center">
                 <Input
                     id="key"
+                    className={clsx(
+                        "border rounded-md px-3 py-2",
+                        !editMode && "bg-gray-100 text-gray-500 cursor-default"
+                    )}
                     placeholder="keyword"
-                    disabled={!editMode}
+                    readOnly={!editMode}
                     value={keyValue.key}
+                    onDoubleClick={() => setEditMode(true)}
                     onChange={(e) => onChange({ ...keyValue, key: e.target.value })}
                 />
             </div>
@@ -35,9 +41,14 @@ export function KeyValueInput({ keyValue, onChange, onDelete, className }: KeyVa
             <div className="flex flex-row gap-2 items-center">
                 <Input
                     id="value"
+                    className={clsx(
+                        "border rounded-md px-3 py-2",
+                        !editMode && "bg-gray-100 text-gray-500 cursor-default"
+                    )}
                     placeholder="Url"
-                    disabled={!editMode}
+                    readOnly={!editMode}
                     value={keyValue.value}
+                    onDoubleClick={() => setEditMode(true)}
                     onChange={(e) => onChange({ ...keyValue, value: e.target.value })}
                 />
             </div>
