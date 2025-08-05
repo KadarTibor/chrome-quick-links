@@ -44,8 +44,15 @@
           chrome.tabs.create({ url: activeTab.url, index: activeTab.index! + 1 })
         }
       })
+    } else if (command === "move-tab-to-new-window") {
+      console.log('triggered');
+      chrome.tabs.query({ active: true, currentWindow: true }, ([tab]) => {
+        chrome.windows.create({ tabId: tab.id });
+      })
     }
   })
+
+  
 
   chrome.tabs.onCreated.addListener((tab) => {
     console.log("New tab opened:", tab);

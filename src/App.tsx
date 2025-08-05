@@ -1,10 +1,13 @@
+import { TooltipProvider } from '@radix-ui/react-tooltip';
 import './App.css';
 import { KeywordMapEditor } from './components/quick-links-map';
 
 function App() {
   return (
     <>
-      <KeywordMapEditor></KeywordMapEditor>
+      <TooltipProvider>
+        <KeywordMapEditor></KeywordMapEditor>
+      </TooltipProvider>
     </>
   )
 }

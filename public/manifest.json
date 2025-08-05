@@ -21,6 +21,12 @@
                 "default": "Ctrl+Shift+U"
             },
             "description": "Duplicate the current tab"
+        },
+        "move-tab-to-new-window": {
+            "suggested_key": {
+                "default": "Ctrl+Shift+M"
+            },
+            "description": "Move current tab to new window"
         }
     },
     "icons": {
