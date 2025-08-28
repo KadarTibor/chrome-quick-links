@@ -3,6 +3,8 @@ import { KeyValueInput } from "./keyword-entry"
 import { Button } from "./ui/button"
 import { Download, Plus, Upload } from "lucide-react"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@radix-ui/react-tooltip"
+import { Shortcut } from "./shortcuts/key-shortcut"
+import { Label } from "./ui/label"
 
 interface Entry {
   key: string
@@ -109,7 +111,9 @@ export function KeywordMapEditor() {
 
   return (
     <div className="flex flex-col items-start gap-4 p-4">
-      <h2 className="text-lg font-semibold">⚡️ Links</h2>
+      <Label className="text-2xl font-semibold">
+        Quick 🔗
+      </Label>
       {entries.map((entry, index) => (
         <div key={index}>
           <KeyValueInput keyValue={entry} onChange={(e) => handleChange(index, e)} onDelete={() => removeEntry(index)} />
@@ -157,6 +161,18 @@ export function KeywordMapEditor() {
           onChange={handleFileUpload}
           style={{ display: "none" }}
         />
+      </div>
+
+      <Label className="text-2xl font-semibold">
+          Keyboard Shortcuts
+      </Label>
+      <div className="flex flex-row justify-between w-full">
+        <Label>Duplicate current tab</Label>
+        <Shortcut keys={['Ctrl', 'Shift', 'U']} />
+      </div>
+      <div className="flex flex-row justify-between w-full">
+        <Label>Move current tab to new window</Label>
+        <Shortcut keys={['Ctrl', 'Shift', 'Y']} />
       </div>
     </div>
   )

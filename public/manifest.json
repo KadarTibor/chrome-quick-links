@@ -1,7 +1,7 @@
 {
     "manifest_version": 3,
     "name": "🦘 Jumpy",
-    "version": "0.0.1",
+    "version": "0.0.2",
     "action": {
         "default_popup": "index.html"
     },
@@ -24,7 +24,7 @@
         },
         "move-tab-to-new-window": {
             "suggested_key": {
-                "default": "Ctrl+Shift+M"
+                "default": "Ctrl+Shift+Y"
             },
             "description": "Move current tab to new window"
         }
