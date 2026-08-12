@@ -1,61 +1,76 @@
-  chrome.runtime.onInstalled.addListener(() => {
-    console.log('Extension installed');
-  });
+chrome.runtime.onInstalled.addListener(() => {
+  console.log('Extension installed');
+});
 
-  let keywordMap: Record<string, string> = {}
+// Only a fast path. The MV3 service worker can be torn down at any moment, so
+// every read falls back to storage instead of trusting this to be populated.
+let keywordMap: Record<string, string> | null = null;
 
-  function reloadKeywordMapFromStorage() {
-    chrome.storage.sync.get("keywordMap", (result) => {
-      keywordMap = result.keywordMap || {}
-      console.log("Background reloaded map:", keywordMap)
-    })
-    remapOmnibox();
+async function getKeywordMap(): Promise<Record<string, string>> {
+  if (keywordMap) return keywordMap;
+  const result = await chrome.storage.sync.get("keywordMap");
+  keywordMap = (result.keywordMap as Record<string, string>) || {};
+  return keywordMap;
+}
+
+// The popup writes straight to storage, so watching for changes replaces the
+// old "tell the background to reload" message round-trip.
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area === "sync" && changes.keywordMap) {
+    keywordMap = (changes.keywordMap.newValue as Record<string, string>) || {};
   }
-  
-  chrome.runtime.onMessage.addListener((message, _, __) => {
-    if (message.type === "RELOAD_KEYWORD_MAP") {
-      reloadKeywordMapFromStorage()
-    }
-  })
+});
 
-  function remapOmnibox() {
-    chrome.omnibox.onInputEntered.addListener((text) => {
-      console.log('this is triggered', text);
-      const url = keywordMap[text.toLowerCase()];
-      if (url) {
-        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-          if (tabs[0]?.id) {
-            chrome.tabs.update(tabs[0].id, { url });
-          }
-        });
-      } else {
-        chrome.omnibox.setDefaultSuggestion({
-          description: `Unknown keyword: "${text}"`
-        });
-      }
+function resolveUrl(value: string): string {
+  return /^[a-z][a-z0-9+.-]*:/i.test(value) ? value : `https://${value}`;
+}
+
+// Every listener below is registered synchronously at the top level. MV3 spins
+// the service worker up fresh for each event and drops events that have no
+// listener registered yet, so registering them from inside a callback means the
+// first omnibox entry after the worker sleeps goes nowhere.
+chrome.omnibox.onInputChanged.addListener(async (text, suggest) => {
+  const map = await getKeywordMap();
+  const query = text.trim().toLowerCase();
+  const matches = Object.entries(map).filter(([keyword]) =>
+    keyword.startsWith(query)
+  );
+
+  if (matches.length === 0) {
+    chrome.omnibox.setDefaultSuggestion({
+      description: query ? `Unknown keyword: "${query}"` : "Type a keyword",
     });
+    suggest([]);
+    return;
   }
 
-  chrome.commands.onCommand.addListener((command) => {
-    if (command === "duplicate-tab") {
-      chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-        const activeTab = tabs[0]
-        if (activeTab?.url) {
-          chrome.tabs.create({ url: activeTab.url, index: activeTab.index! + 1 })
-        }
-      })
-    } else if (command === "move-tab-to-new-window") {
-      console.log('triggered');
-      chrome.tabs.query({ active: true, currentWindow: true }, ([tab]) => {
-        chrome.windows.create({ tabId: tab.id });
-      })
-    }
-  })
+  chrome.omnibox.setDefaultSuggestion({ description: "Jump to a saved link" });
+  suggest(
+    matches.map(([keyword, url]) => ({
+      content: keyword,
+      description: `${keyword} — ${url}`,
+    }))
+  );
+});
 
-  
+chrome.omnibox.onInputEntered.addListener(async (text) => {
+  const map = await getKeywordMap();
+  const url = map[text.trim().toLowerCase()];
+  if (!url) return;
 
-  chrome.tabs.onCreated.addListener((tab) => {
-    console.log("New tab opened:", tab);
-    reloadKeywordMapFromStorage();
-  })
-  
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  if (tab?.id) {
+    chrome.tabs.update(tab.id, { url: resolveUrl(url) });
+  }
+});
+
+chrome.commands.onCommand.addListener(async (command) => {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  if (!tab) return;
+
+  if (command === "duplicate-tab" && tab.id) {
+    chrome.tabs.duplicate(tab.id);
+  } else if (command === "move-tab-to-new-window" && tab.id) {
+    chrome.windows.create({ tabId: tab.id });
+  }
+});
