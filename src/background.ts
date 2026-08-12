@@ -2,25 +2,11 @@
     console.log('Extension installed');
   });
 
-  let keywordMap: Record<string, string> = {}
-
-  function reloadKeywordMapFromStorage() {
+  // Registered at the top level so it survives service worker restarts.
+  // Reads directly from storage to avoid stale in-memory state after termination.
+  chrome.omnibox.onInputEntered.addListener((text) => {
     chrome.storage.sync.get("keywordMap", (result) => {
-      keywordMap = result.keywordMap || {}
-      console.log("Background reloaded map:", keywordMap)
-    })
-    remapOmnibox();
-  }
-  
-  chrome.runtime.onMessage.addListener((message, _, __) => {
-    if (message.type === "RELOAD_KEYWORD_MAP") {
-      reloadKeywordMapFromStorage()
-    }
-  })
-
-  function remapOmnibox() {
-    chrome.omnibox.onInputEntered.addListener((text) => {
-      console.log('this is triggered', text);
+      const keywordMap: Record<string, string> = result.keywordMap || {};
       const url = keywordMap[text.toLowerCase()];
       if (url) {
         chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
@@ -28,13 +14,15 @@
             chrome.tabs.update(tabs[0].id, { url });
           }
         });
-      } else {
-        chrome.omnibox.setDefaultSuggestion({
-          description: `Unknown keyword: "${text}"`
-        });
       }
     });
-  }
+  });
+
+  chrome.runtime.onMessage.addListener((message, _, __) => {
+    if (message.type === "RELOAD_KEYWORD_MAP") {
+      console.log("Keyword map updated in storage");
+    }
+  })
 
   chrome.commands.onCommand.addListener((command) => {
     if (command === "duplicate-tab") {
@@ -56,6 +44,5 @@
 
   chrome.tabs.onCreated.addListener((tab) => {
     console.log("New tab opened:", tab);
-    reloadKeywordMapFromStorage();
   })
   
