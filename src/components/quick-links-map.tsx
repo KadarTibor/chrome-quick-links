@@ -33,11 +33,10 @@ export function KeywordMapEditor() {
   // Save updated map to storage
   const saveToStorage = (updated: Entry[]) => {
     const mapped = Object.fromEntries(updated.map(({ key, value }) => [key, value]))
+    // The background listens on chrome.storage.onChanged, so writing is enough.
     chrome.storage.sync.set({ keywordMap: mapped }, () => {
       console.log("Keyword map saved", mapped)
     });
-    // Notify background to reload
-    chrome.runtime.sendMessage({ type: "RELOAD_KEYWORD_MAP" })
   }
 
   const handleChange = (index: number, updatedEntry: Entry) => {

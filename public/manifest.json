@@ -3,7 +3,13 @@
     "name": "🦘 Jumpy",
     "version": "0.0.3",
     "action": {
-        "default_popup": "index.html"
+        "default_popup": "index.html",
+        "default_icon": {
+            "16": "assets/logo-16.png",
+            "32": "assets/logo-32.png",
+            "48": "assets/logo-48.png",
+            "128": "assets/logo-128.png"
+        }
     },
     "permissions": [
         "storage",
@@ -30,6 +36,9 @@
         }
     },
     "icons": {
+        "16": "assets/logo-16.png",
+        "32": "assets/logo-32.png",
+        "48": "assets/logo-48.png",
         "128": "assets/logo-128.png"
     }
 }
