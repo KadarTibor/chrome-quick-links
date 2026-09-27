@@ -1,7 +1,19 @@
 {
   "name": "chrome-quick-links",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.0.4",
+  "description": "Jumpy — a Chrome extension that maps short keywords to URLs and jumps to them straight from the address bar.",
+  "author": "kadartibor",
+  "license": "MIT",
+  "keywords": [
+    "chrome-extension",
+    "manifest-v3",
+    "omnibox",
+    "bookmarks",
+    "productivity",
+    "react",
+    "typescript"
+  ],
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -40,10 +52,5 @@
     "typescript-eslint": "^8.35.1",
     "vite": "^7.0.4",
     "web-ext": "^8.9.0"
-  },
-  "description": "This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.",
-  "main": "eslint.config.js",
-  "keywords": [],
-  "author": "",
-  "license": "ISC"
+  }
 }

@@ -22,3 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Extension build artifacts (published via GitHub Releases)
+web-ext-artifacts
