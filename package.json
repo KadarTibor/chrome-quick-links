@@ -1,7 +1,7 @@
 {
   "name": "chrome-quick-links",
   "private": true,
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "Jumpy — a Chrome extension that maps short keywords to URLs and jumps to them straight from the address bar.",
   "author": "kadartibor",
   "license": "MIT",
