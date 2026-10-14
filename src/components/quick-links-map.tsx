@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import debounce from "lodash.debounce"
 import { KeyValueInput } from "./keyword-entry"
 import { Button } from "./ui/button"
 import { Download, Plus, Upload } from "lucide-react"
@@ -11,9 +12,36 @@ interface Entry {
   value: string
 }
 
+// chrome.storage.sync allows 120 writes/minute and 1800/hour, and rejects the
+// ones over the line. Typing used to write once per keystroke, which is well
+// past that for a single URL, so edits have to settle before they're persisted.
+const SAVE_DEBOUNCE_MS = 400
+
+// A half-typed keyword must never reach storage: the map is keyed by keyword,
+// so an entry that transiently collides with a saved one would overwrite it.
+// Blank keys are skipped and the first occurrence of a duplicate wins.
+function buildMap(entries: Entry[]) {
+  const map: Record<string, string> = {}
+  const duplicates: string[] = []
+
+  for (const { key, value } of entries) {
+    const keyword = key.trim()
+    if (!keyword) continue
+    if (keyword in map) {
+      if (!duplicates.includes(keyword)) duplicates.push(keyword)
+      continue
+    }
+    map[keyword] = value.trim()
+  }
+
+  return { map, duplicates }
+}
+
 export function KeywordMapEditor() {
   const [entries, setEntries] = useState<Entry[]>([])
+  const [saveError, setSaveError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+
   // Load from chrome.storage.local
   useEffect(() => {
     loadMapFromStorage();
@@ -31,32 +59,62 @@ export function KeywordMapEditor() {
   }
 
   // Save updated map to storage
-  const saveToStorage = (updated: Entry[]) => {
-    const mapped = Object.fromEntries(updated.map(({ key, value }) => [key, value]))
+  const writeToStorage = useCallback((updated: Entry[]) => {
+    const { map } = buildMap(updated)
     // The background listens on chrome.storage.onChanged, so writing is enough.
-    chrome.storage.sync.set({ keywordMap: mapped }, () => {
-      console.log("Keyword map saved", mapped)
+    chrome.storage.sync.set({ keywordMap: map }, () => {
+      // Over quota the write is dropped and only lastError says so — without
+      // this the UI keeps showing text that was never saved.
+      const error = chrome.runtime.lastError
+      if (error) {
+        console.error("Keyword map NOT saved", error.message)
+        setSaveError(error.message ?? "Unknown storage error")
+        return
+      }
+      setSaveError(null)
     });
-  }
+  }, [])
+
+  const scheduleSave = useMemo(
+    () => debounce(writeToStorage, SAVE_DEBOUNCE_MS),
+    [writeToStorage]
+  )
+
+  // Discrete actions (delete, import) are one write each, so they skip the
+  // debounce — but they still have to drop a keystroke write queued behind
+  // stale entries.
+  const saveNow = useCallback((updated: Entry[]) => {
+    scheduleSave.cancel()
+    writeToStorage(updated)
+  }, [scheduleSave, writeToStorage])
+
+  // The popup can be dismissed mid-keystroke. pagehide is the last moment the
+  // pending write can still be handed to the browser process.
+  useEffect(() => {
+    const flush = () => { scheduleSave.flush() }
+    window.addEventListener("pagehide", flush)
+    return () => {
+      window.removeEventListener("pagehide", flush)
+      flush()
+    }
+  }, [scheduleSave])
 
   const handleChange = (index: number, updatedEntry: Entry) => {
     const updated = [...entries]
     updated[index] = updatedEntry
     setEntries(updated)
-    saveToStorage(updated)
+    scheduleSave(updated)
   }
 
+  // Nothing to persist until the row has a keyword, so this doesn't write.
   const addNewEntry = () => {
-    const updated = [...entries, { key: "", value: "" }]
-    setEntries(updated)
-    saveToStorage(updated)
+    setEntries([...entries, { key: "", value: "" }])
   }
 
   const removeEntry = (index: number) => {
-    entries.splice(index, 1)
-    const updated = [...entries];
+    const updated = entries.filter((_, i) => i !== index)
     setEntries(updated)
-    saveToStorage([...entries])
+    saveNow(updated)
   }
 
   const exportJson = () => {
@@ -92,27 +150,38 @@ export function KeywordMapEditor() {
       try {
         const parsed = JSON.parse(e.target?.result as string) as Record<string, string>;
 
-        console.log(parsed);
-
         const loadedEntries = Object.entries(parsed).map(([key, value]) => ({
           key,
           value,
         }));
-        saveToStorage([...loadedEntries]);
-        setEntries([...loadedEntries])
+        saveNow(loadedEntries);
+        setEntries(loadedEntries)
 
       } catch (err) {
         console.error("Invalid JSON file", err);
+        setSaveError("That file isn't valid JSON")
       }
     };
     reader.readAsText(file);
   };
+
+  const { duplicates } = buildMap(entries)
 
   return (
     <div className="flex flex-col items-start gap-4 p-4">
       <Label className="text-2xl font-semibold">
         Quick 🔗
       </Label>
+      {saveError && (
+        <Label className="text-sm font-normal text-red-500">
+          Not saved — {saveError}
+        </Label>
+      )}
+      {duplicates.length > 0 && (
+        <Label className="text-sm font-normal text-red-500">
+          Duplicate keyword{duplicates.length > 1 ? "s" : ""} not saved: {duplicates.join(", ")}
+        </Label>
+      )}
       {entries.map((entry, index) => (
         <div key={index}>
           <KeyValueInput keyValue={entry} onChange={(e) => handleChange(index, e)} onDelete={() => removeEntry(index)} />
